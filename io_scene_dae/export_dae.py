@@ -388,7 +388,7 @@ class DaeExporter:
             return self.mesh_cache[mesh]
 
         if (skeyindex == -1 and mesh.shape_keys is not None and len(
-                mesh.shape_keys.key_blocks) and self.config["use_shape_key_export"]):
+                mesh.shape_keys.key_blocks)):
             values = []
             morph_targets = []
             md = None
@@ -661,8 +661,17 @@ class DaeExporter:
         self.writel(S_GEOM, 3, "<source id=\"{}-positions\">".format(meshid))
         float_values = ""
         for v in vertices:
+            vx = v.vertex.x
+            vy = v.vertex.y
+            vz = v.vertex.z
+
+            if (self.config["use_vertex_round"]):
+                vx = round(vx, 1)
+                vy = round(vy, 1)
+                vz = round(vz, 1)
+
             float_values += " {} {} {}".format(
-                v.vertex.x, v.vertex.y, v.vertex.z)
+                vx, vy, vz)
         self.writel(
             S_GEOM, 4, "<float_array id=\"{}-positions-array\" "
             "count=\"{}\">{}</float_array>".format(
@@ -682,8 +691,17 @@ class DaeExporter:
         self.writel(S_GEOM, 3, "<source id=\"{}-normals\">".format(meshid))
         float_values = ""
         for v in vertices:
+            vx = v.normal.x
+            vy = v.normal.y
+            vz = v.normal.z
+
+            if (self.config["use_vertex_round"]):
+                vx = round(vx, 1)
+                vy = round(vy, 1)
+                vz = round(vz, 1)
+
             float_values += " {} {} {}".format(
-                v.normal.x, v.normal.y, v.normal.z)
+                vx, vy, vz)
         self.writel(
             S_GEOM, 4, "<float_array id=\"{}-normals-array\" "
             "count=\"{}\">{}</float_array>".format(
@@ -704,8 +722,17 @@ class DaeExporter:
                 S_GEOM, 3, "<source id=\"{}-tangents\">".format(meshid))
             float_values = ""
             for v in vertices:
+                vx = v.tangent.x
+                vy = v.tangent.y
+                vz = v.tangent.z
+
+                if (self.config["use_vertex_round"]):
+                    vx = round(vx, 1)
+                    vy = round(vy, 1)
+                    vz = round(vz, 1)
+
                 float_values += " {} {} {}".format(
-                    v.tangent.x, v.tangent.y, v.tangent.z)
+                    vx, vy, vz)
             self.writel(
                 S_GEOM, 4, "<float_array id=\"{}-tangents-array\" "
                 "count=\"{}\">{}</float_array>".format(
@@ -725,8 +752,18 @@ class DaeExporter:
                 meshid))
             float_values = ""
             for v in vertices:
+
+                vx = v.bitangent.x
+                vy = v.bitangent.y
+                vz = v.bitangent.z
+
+                if (self.config["use_vertex_round"]):
+                    vx = round(vx, 1)
+                    vy = round(vy, 1)
+                    vz = round(vz, 1)
+
                 float_values += " {} {} {}".format(
-                    v.bitangent.x, v.bitangent.y, v.bitangent.z)
+                    vx, vy, vz)
             self.writel(
                 S_GEOM, 4, "<float_array id=\"{}-bitangents-array\" "
                 "count=\"{}\">{}</float_array>".format(
@@ -749,7 +786,14 @@ class DaeExporter:
             float_values = ""
             for v in vertices:
                 try:
-                    float_values += " {} {}".format(v.uv[uvi].x, v.uv[uvi].y)
+                    vx = v.uv[uvi].x
+                    vy = v.uv[uvi].y
+
+                    if (self.config["use_vertex_round"]):
+                        vx = round(vx, 1)
+                        vy = round(vy, 1)
+
+                    float_values += " {} {}".format(vx, vy)
                 except:
                     # TODO: Review, understand better the multi-uv-layer API
                     float_values += " 0 0 "
@@ -1067,8 +1111,8 @@ class DaeExporter:
 
     def export_armature_bone(self, bone, il, si):
         is_ctrl_bone = (
-            self.config["use_exclude_ctrl_bones"] and
-            (bone.name.startswith("ctrl") or bone.use_deform == False))
+            bone.name.startswith("ctrl") and
+            self.config["use_exclude_ctrl_bones"])
         if (bone.parent is None and is_ctrl_bone is True):
             self.operator.report(
                 {"WARNING"}, "Root bone cannot be a control bone.")
@@ -1451,7 +1495,7 @@ class DaeExporter:
         elif (node.type == "EMPTY"):
             self.export_empty_node(node, il)
 
-        for x in sorted(node.children, key=lambda x: x.name):
+        for x in node.children:
             self.export_node(x, il)
 
         il -= 1
@@ -1492,7 +1536,7 @@ class DaeExporter:
                         self.valid_nodes.append(n)
                     n = n.parent
 
-        for obj in sorted(self.scene.objects, key=lambda x: x.name):
+        for obj in self.scene.objects:
             if (obj in self.valid_nodes and obj.parent is None):
                 self.export_node(obj, 2)
 
@@ -1696,9 +1740,8 @@ class DaeExporter:
                 if (node.type == "ARMATURE"):
                     # All bones exported for now
                     for bone in node.data.bones:
-                        if((bone.name.startswith("ctrl") or
-                            bone.use_deform == False) and
-                                self.config["use_exclude_ctrl_bones"]):
+                        if((bone.name.startswith("ctrl") and
+                                self.config["use_exclude_ctrl_bones"])):
                             continue
 
                         bone_name = self.skeleton_info[node]["bone_ids"][bone]
@@ -1713,10 +1756,8 @@ class DaeExporter:
                         if (bone.parent):
                             if (self.config["use_exclude_ctrl_bones"]):
                                 current_parent_posebone = bone.parent
-                                while ((current_parent_posebone.name
-                                        .startswith("ctrl") or
-                                        current_parent_posebone.use_deform
-                                        == False) and
+                                while (current_parent_posebone.name
+                                        .startswith("ctrl") and
                                         current_parent_posebone.parent):
                                     current_parent_posebone = (
                                         current_parent_posebone.parent)
