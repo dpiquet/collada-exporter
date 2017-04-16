@@ -98,7 +98,8 @@ class ExportDAE(bpy.types.Operator, ExportHelper):
         )
     use_exclude_ctrl_bones = BoolProperty(
         name="Exclude Control Bones",
-        description="Exclude skeleton bones with names beginning with 'ctrl'.",
+        description=("Exclude skeleton bones with names beginning with 'ctrl' "
+                     "or bones which are not marked as Deform bones."),
         default=True,
         )
     use_anim = BoolProperty(
@@ -122,6 +123,12 @@ class ExportDAE(bpy.types.Operator, ExportHelper):
         name="Optimize Keyframes",
         description="Remove double keyframes",
         default=True,
+        )
+
+    use_shape_key_export = BoolProperty(
+        name="Shape Keys",
+        description="Export shape keys for selected objects.",
+        default=False,
         )
 
     anim_optimize_precision = FloatProperty(

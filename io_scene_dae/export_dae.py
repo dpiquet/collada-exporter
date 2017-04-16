@@ -388,7 +388,7 @@ class DaeExporter:
             return self.mesh_cache[mesh]
 
         if (skeyindex == -1 and mesh.shape_keys is not None and len(
-                mesh.shape_keys.key_blocks)):
+                mesh.shape_keys.key_blocks) and self.config["use_shape_key_export"]):
             values = []
             morph_targets = []
             md = None
@@ -752,7 +752,6 @@ class DaeExporter:
                 meshid))
             float_values = ""
             for v in vertices:
-
                 vx = v.bitangent.x
                 vy = v.bitangent.y
                 vz = v.bitangent.z
@@ -1111,8 +1110,8 @@ class DaeExporter:
 
     def export_armature_bone(self, bone, il, si):
         is_ctrl_bone = (
-            bone.name.startswith("ctrl") and
-            self.config["use_exclude_ctrl_bones"])
+            self.config["use_exclude_ctrl_bones"] and
+            (bone.name.startswith("ctrl") or bone.use_deform == False))
         if (bone.parent is None and is_ctrl_bone is True):
             self.operator.report(
                 {"WARNING"}, "Root bone cannot be a control bone.")
@@ -1495,7 +1494,7 @@ class DaeExporter:
         elif (node.type == "EMPTY"):
             self.export_empty_node(node, il)
 
-        for x in node.children:
+        for x in sorted(node.children, key=lambda x: x.name):
             self.export_node(x, il)
 
         il -= 1
@@ -1536,7 +1535,7 @@ class DaeExporter:
                         self.valid_nodes.append(n)
                     n = n.parent
 
-        for obj in self.scene.objects:
+        for obj in sorted(self.scene.objects, key=lambda x: x.name):
             if (obj in self.valid_nodes and obj.parent is None):
                 self.export_node(obj, 2)
 
@@ -1740,8 +1739,9 @@ class DaeExporter:
                 if (node.type == "ARMATURE"):
                     # All bones exported for now
                     for bone in node.data.bones:
-                        if((bone.name.startswith("ctrl") and
-                                self.config["use_exclude_ctrl_bones"])):
+                        if((bone.name.startswith("ctrl") or
+                            bone.use_deform == False) and
+                                self.config["use_exclude_ctrl_bones"]):
                             continue
 
                         bone_name = self.skeleton_info[node]["bone_ids"][bone]
@@ -1756,8 +1756,10 @@ class DaeExporter:
                         if (bone.parent):
                             if (self.config["use_exclude_ctrl_bones"]):
                                 current_parent_posebone = bone.parent
-                                while (current_parent_posebone.name
-                                        .startswith("ctrl") and
+                                while ((current_parent_posebone.name
+                                        .startswith("ctrl") or
+                                        current_parent_posebone.use_deform
+                                        == False) and
                                         current_parent_posebone.parent):
                                     current_parent_posebone = (
                                         current_parent_posebone.parent)
